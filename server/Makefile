@@ -4,13 +4,14 @@
 
 
 CROSS_COMPILE ?= arm-linux-gnueabihf-
-CC := $(CROSS_COMPILE)gcc 
+CC := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)gcc
 AR := $(CROSS_COMPILE)ar cr
 STRIP := $(CROSS_COMPILE)strip
 
-INCLUDES := $(PWD)/include
-CFLAGS = -I$(INCLUDES) -Wall
+INCLUDES += -I$(PWD)/include
+INCLUDES += -I$(PWD)/../../external/sqlite/include
+CFLAGS = $(INCLUDES) -Wall
 #CFLAGS +=
 
 # 正则表达式表示目录下所有.c文件，相当于：SRCS = main.c a.c b.c
@@ -22,10 +23,12 @@ OBJS = $(patsubst %c, %o, $(SRCS))
 COMMON_SRCS = $(wildcard common/*.c)
 COMMON_OBJS = $(patsubst %c, %o, $(COMMON_SRCS))
 
-LIBS := -L -lpthread -lm ./lib/liblog.a ./lib/libsqlite3.42.a
-#$(SERVER_LIB_DIR)/liblog.a $(SERVER_LIB_DIR)/libsqlite3.42.a
+LIBS_PATH := $(PWD)/../../external
+LIBS := -lpthread -lm  
+LIBS += -L$(LIBS_PATH)/sqlite/lib -lsqlite3
+
 # 可执行文件的名字
-TARGET = helloworld
+TARGET = server
 
 # .PHONE伪目标，具体含义百度一下一大堆介绍
 .PHONY:all clean
