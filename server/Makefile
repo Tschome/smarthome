@@ -2,7 +2,6 @@
 #
 # 需要静态编译(交叉)的：log sqlite3
 
-
 CROSS_COMPILE ?= arm-linux-gnueabihf-
 CC := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)gcc
