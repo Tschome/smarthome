@@ -41,23 +41,86 @@
 
 //#define log_error()
 
-//SH_GLOBAL_T *glb = NULL;
+GLOBAL_T *glb = NULL;
 
-/*
-static int init_sqlite3(SH_GLOBAL_T *glb)
+static int callback(void *NotUsed, int argc, char **argv, char **azColName)
+{
+	int i;
+	for(i=0; i<argc; i++){
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+	}
+	printf("\n");
+
+	return 0;
+}
+
+static int init_sqlite3(DB_SQLITE_T *handle)
 {
 	int ret = 0;
-	
-	ret = init_db(glb->db_log, LOG_DATABASE_FILE, CREATE_DB_LOG);
-	if (ret != 0) {
-		log(TAG, LOG_ERROR,"init_db_log failed!\n");
-		return ret;
+	char *zErrMsg = 0;
+
+	ret = sqlite3_open(handle->name, &handle->sqlite);
+	if (ret) {
+		log(TAG, LOG_WARNING,"Cound not find %s. Now create it!\n", handle->name);
+
+		ret = sqlite3_exec(handle->sqlite, handle->createSql, callback, 0, &zErrMsg);
+		if (ret != SQLITE_OK) {
+			log(TAG, LOG_ERROR "SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			return ret;
+		} else {
+			log(TAG, LOG_TRACE, "Table %s created successfully\n", handle->name);
+		}
+	} else {
+		log(TAG, LOG_TRACE, "Open DB %d success!\n", handle->name);
 	}
 
 	return ret;
 }
-*/
 
+
+int init_db(void)
+{
+	int ret = 0;
+	int ues_sqlite = 1;
+
+	/*在这里面需要考虑分表问题，比如一天一个表或一个月一个表，而且是可以进行配置的*/
+
+	ret = init_sqlite3(glb->sqHandle[eSQLITE_LOG]);
+	if (ret != 0) {
+		log(TAG, LOG_ERROR, "%s failed!\n", __func__);
+		return ret;
+	}
+
+	return 0;
+}
+
+
+int deinit_db(void)
+{
+	int ret = 0;
+	sqlite3 *db;
+
+	int i = 0;
+	for (i = 0; i < MAX_SQLITE_CNTS; i++) {
+		db = glb->sqHandle[i];
+		if (db != NULL) {
+			sqlite3_close(db);
+			db = NULL;
+		}
+	}
+
+	return ret;
+}
+
+int init(void)
+{
+	int ret = 0;
+	//参数初始化（default）
+
+	log(TAG, LOG_INFO, "server init successfully!!!\n");
+	return ret;
+}
 
 int main(int argc, char **argv)
 {
@@ -70,129 +133,52 @@ int main(int argc, char **argv)
 	log_set_flags(LOG_SKIP_REPEATED | LOG_PRINT_LEVEL);//跳过重复的信息 + 显示打印级别
 	log_set_level(LOG_MAX_OFFSET);
 
-	log(TAG, LOG_INFO, "server init\n");
-
-#if 0
 	if (glb != NULL) free(glb);
-	glb = (SH_GLOBAL_T *)malloc(sizeof(SH_GLOBAL_T));
+	glb = (GLOBAL_T *)malloc(sizeof(GLOBAL_T));
 	if (glb == NULL) {
 		log(TAG, LOG_ERROR, "malloc glb failed!\n");
 		return -1;
 	}
 
-
-
-	/* parse config file */
-	//使用xml配置文件，对相关参数进行配置
-	ret = parse_config();
-	if (ret != 0) {
-		log(TAG, LOG_ERROR,"parse_config failed!\n");
-		return ret;
-	}
-
-	/* init db thread */
-	//确认使用数据库方式
-	if (glb->tConfig.db_type == 0) {
-		ret = init_sqlite3(glb);
+	do {
+		/* init */
+		ret = init();
 		if (ret != 0) {
-			log(TAG, LOG_ERROR,"%s failed!\n", __func__);
-			return ret;
+			break;
 		}
-	}
-	/* init collect thread */
-#endif
 
-	log(TAG, LOG_QUIET, "LOG_QUIET\n");
-	log(TAG, LOG_PANIC, "LOG_PANIC\n");
-	log(TAG, LOG_FATAL, "LOG_FATAL\n");
-	log(TAG, LOG_ERROR, "LOG_ERROR\n");
-	log(TAG, LOG_WARNING, "LOG_WARNING\n");
-	log(TAG, LOG_INFO, "LOG_INFO\n");
-	log(TAG, LOG_VERBOSE, "LOG_VERBOSE\n");
-	log(TAG, LOG_DEBUG, "LOG_DEBUG\n");
-	log(TAG, LOG_TRACE, "LOG_TRACE\n");
-	log(TAG, LOG_MAX_OFFSET, "LOG_MAX_OFFSET\n");
-	return;
+		/* parse config file */
+		//使用xml配置文件，对相关参数进行配置
+		ret = parse_config();
+		if (ret != 0) {
+			log(TAG, LOG_ERROR,"parse_config failed!\n");
+			break;
+		}
+
+		/* init db thread */
+		//确认使用数据库方式
+		ret = init_db();
+		if (ret != 0) {
+			log(TAG, LOG_ERROR,"init_db failed!\n");
+			break;
+		}
+
+		/* 1.打开定时器 */
+		/* 2.开辟fifo，用于调试 */
+
+
+
+		/* init log thread用于记录实时数据，以及错误信息等*/
+		/* init collect thread */
+		/* init upload thread */
+
+	} while(0);
+
+err_init_db:
+	deinit_db();	
+	return ret;
 }
 
 
-
-#if 0
-
-#include <stdio.h>
-#include <stdlib.h>
-
-
-
-static int callback(void *NotUsed, int argc, char **argv, char **azColName){
-   int i;
-   for(i=0; i<argc; i++){
-      printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-   }
-   printf("\n");
-   return 0;
-}
-
-
-
-
-
-int main(int argc, char **argv)
-{
-	printf("HELLO World!\n");
-
-
-	//sqlite3* db;
-	int a = 5, b = 10;
-
-	int ret = add(a,b);
-
-	printf("ret:%d\n", ret);
-	log_set_flags(LOG_SKIP_REPEATED | LOG_PRINT_LEVEL);//跳过重复的信息 + 显示打印级别
-
-
-sqlite3 *db;
-   char *zErrMsg = 0;
-   int rc;
-   char *sql;
-
-   /* Open database */
-   rc = sqlite3_open("test.db", &db);
-   if( rc ){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-      exit(0);
-   }else{
-      fprintf(stderr, "Opened database successfully\n");
-   }
-
-   /* Create SQL statement */
-   sql = "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-         "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
-         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-         "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
-         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-         "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
-         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-         "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );";
-
-   /* Execute SQL statement */
-   rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-   if( rc != SQLITE_OK ){
-      fprintf(stderr, "SQL error: %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
-   }else{
-      fprintf(stdout, "Records created successfully\n");
-   }
-   sqlite3_close(db);
-
-
-
-
-
-
-	return 0;
-}
-
-#endif
 
 
