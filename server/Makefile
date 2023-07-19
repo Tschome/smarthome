@@ -10,7 +10,7 @@ STRIP := $(CROSS_COMPILE)strip
 
 INCLUDES += -I$(PWD)/include
 INCLUDES += -I$(PWD)/../../external/sqlite/include
-CFLAGS = $(INCLUDES) -Wall
+CFLAGS = $(INCLUDES) -Wall -fno-builtin
 #CFLAGS +=
 
 # 正则表达式表示目录下所有.c文件，相当于：SRCS = main.c a.c b.c
@@ -19,11 +19,11 @@ SRCS = $(wildcard *.c common/*.c)
 # OBJS表示SRCS中把列表中的.c全部替换为.o，相当于：OBJS = main.o a.o b.o
 OBJS = $(patsubst %c, %o, $(SRCS))
 
-COMMON_SRCS = $(wildcard common/*.c)
+COMMON_SRCS = $(wildcard common/*.c db/*.c)
 COMMON_OBJS = $(patsubst %c, %o, $(COMMON_SRCS))
 
 LIBS_PATH := $(PWD)/../../external
-LIBS := -lpthread -lm  
+LIBS := -lpthread -lm
 LIBS += -L$(LIBS_PATH)/sqlite/lib -lsqlite3
 
 # 可执行文件的名字
@@ -46,7 +46,7 @@ $(TARGET): $(OBJS) $(COMMON_OBJS)
 
 # make clean删除所有.o和目标文件
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(COMMON_OBJS)
 
 
 

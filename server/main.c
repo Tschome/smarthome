@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sqlite3.h>
 
 #include "common.h"
 
@@ -42,76 +41,6 @@
 //#define log_error()
 
 GLOBAL_T *glb = NULL;
-
-static int callback(void *NotUsed, int argc, char **argv, char **azColName)
-{
-	int i;
-	for(i=0; i<argc; i++){
-		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-	}
-	printf("\n");
-
-	return 0;
-}
-
-static int init_sqlite3(DB_SQLITE_T *handle)
-{
-	int ret = 0;
-	char *zErrMsg = 0;
-
-	ret = sqlite3_open(handle->name, &handle->sqlite);
-	if (ret) {
-		log(TAG, LOG_WARNING,"Cound not find %s. Now create it!\n", handle->name);
-
-		ret = sqlite3_exec(handle->sqlite, handle->createSql, callback, 0, &zErrMsg);
-		if (ret != SQLITE_OK) {
-			log(TAG, LOG_ERROR "SQL error: %s\n", zErrMsg);
-			sqlite3_free(zErrMsg);
-			return ret;
-		} else {
-			log(TAG, LOG_TRACE, "Table %s created successfully\n", handle->name);
-		}
-	} else {
-		log(TAG, LOG_TRACE, "Open DB %d success!\n", handle->name);
-	}
-
-	return ret;
-}
-
-
-int init_db(void)
-{
-	int ret = 0;
-	int ues_sqlite = 1;
-
-	/*在这里面需要考虑分表问题，比如一天一个表或一个月一个表，而且是可以进行配置的*/
-
-	ret = init_sqlite3(glb->sqHandle[eSQLITE_LOG]);
-	if (ret != 0) {
-		log(TAG, LOG_ERROR, "%s failed!\n", __func__);
-		return ret;
-	}
-
-	return 0;
-}
-
-
-int deinit_db(void)
-{
-	int ret = 0;
-	sqlite3 *db;
-
-	int i = 0;
-	for (i = 0; i < MAX_SQLITE_CNTS; i++) {
-		db = glb->sqHandle[i];
-		if (db != NULL) {
-			sqlite3_close(db);
-			db = NULL;
-		}
-	}
-
-	return ret;
-}
 
 int init(void)
 {
@@ -160,7 +89,7 @@ int main(int argc, char **argv)
 		ret = init_db();
 		if (ret != 0) {
 			log(TAG, LOG_ERROR,"init_db failed!\n");
-			break;
+			goto err_init_db;
 		}
 
 		/* 1.打开定时器 */

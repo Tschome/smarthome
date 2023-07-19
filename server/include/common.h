@@ -1,6 +1,11 @@
 #ifndef __COMMON__
 #define __COMMON__
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sqlite3.h>
+#include <time.h>
 #include "log.h"
 
 
@@ -26,7 +31,7 @@
  * enum
  *
  * *********************************/
-enum{
+typedef enum{
 	STATUS_INIT = 0,
 	STATUS_CLOSE,
 	STATUS_OPEN,
@@ -53,17 +58,20 @@ typedef struct{
 
 
 typedef struct{
-	enum STATUS_E status;
+	STATUS_E status;
 	int 	cycle;
 }PTHREAD_COLLECT_T;
 
 typedef struct{
-	char *name[64];
+	char name[64];
 	sqlite3* sqlite;
-	char *createSql[256];
+	char createSql[256];
 
 }DB_SQLITE_T;
 
+typedef struct{
+	int isInit;
+}CONFIG_COMMON_T;;
 
 typedef struct{
 	int 	status;
@@ -72,7 +80,7 @@ typedef struct{
 	float  	tTemp;
 	
 	/* sqlite3 handle */
-	DB_SQLITE_T sqHandle[MAX_SQLITE_CNTS];
+	DB_SQLITE_T db[MAX_SQLITE_CNTS];
 	/* glb status */
 	STATUS_FAST_T tFastStatus;
 
@@ -88,6 +96,9 @@ typedef struct{
 extern int add(int a, int b);
 
 int parse_config();
+int init_db(void);
+int deinit_db(void);
 
+extern GLOBAL_T *glb;
 
 #endif

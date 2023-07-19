@@ -563,7 +563,7 @@ void bprint_get_buffer(AVBPrint *buf, unsigned size,
     if (size > bprint_room(buf))
         bprint_alloc(buf, size);
     *actual_size = bprint_room(buf);
-    *mem = *actual_size ? buf->str + buf->len : NULL;
+    *mem = *actual_size ? (unsigned char *)(buf->str + buf->len) : NULL;
 }
 
 void bprint_clear(AVBPrint *buf)
@@ -804,7 +804,7 @@ static void check_color_terminal(void)
 #endif
     }
 
-    if (getenv("LOG_FORCE_256COLOR") || term && strstr(term, "256color"))
+    if (getenv("LOG_FORCE_256COLOR") || (term && strstr(term, "256color")))
         use_color *= 256;
 }
 
@@ -980,13 +980,13 @@ void log_default_callback(void *name, int level, const char* fmt, va_list vl)
         count = 0;
     }
     strcpy(prev, line);
-    sanitize(part[0].str);
+    sanitize((uint8_t *)part[0].str);
     colored_fputs(type[0], 0, part[0].str);
-    sanitize(part[1].str);
+    sanitize((uint8_t *)part[1].str);
     colored_fputs(type[1], 0, part[1].str);
-    sanitize(part[2].str);
+    sanitize((uint8_t *)part[2].str);
     colored_fputs(clip(level >> 3, 0, NB_LEVELS - 1), tint >> 8, part[2].str);
-    sanitize(part[3].str);
+    sanitize((uint8_t *)part[3].str);
     colored_fputs(clip(level >> 3, 0, NB_LEVELS - 1), tint >> 8, part[3].str);
 
 #if CONFIG_VALGRIND_BACKTRACE
